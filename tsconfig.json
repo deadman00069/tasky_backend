@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2018",
+    "module": "commonjs",
+    "strict": true,
+    "strictNullChecks": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./build",
+    "rootDir": "api",
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  // "include": [
+  //     "src/**/*.ts"
+  // ],
+  "include": ["api/**/*.ts", "**/*.tsx"],
+
+  "exclude": ["node_modules"]
+}
