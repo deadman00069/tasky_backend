@@ -1,7 +1,7 @@
 import { validationResult } from "express-validator";
 import { UserModel } from "../models/mongo_db_schema/user.schema.ts";
 import { CustomResponse } from "../models/response.ts";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { NextFunction, Request, Response } from "express";
 import { User } from "../models/user.ts";
 import ApiError from "../utils/apiError.ts";
@@ -44,11 +44,19 @@ export const login = async (
     delete user.password;
 
     // Sending tokens as cookies and user data in response
-    return res
-      .status(200)
-      .cookie("accessToken", accessToken, cookieOptions)
-      .cookie("refreshToken", refreshToken, cookieOptions)
-      .json(new ApiResponse(200, user, "Login successful"));
+    return (
+      res
+        .status(200)
+        // .cookie("accessToken", accessToken, cookieOptions)
+        // .cookie("refreshToken", refreshToken, cookieOptions)
+        .json(
+          new ApiResponse(
+            200,
+            { user, accessToken: accessToken, refreshToken: refreshToken },
+            "Login successful"
+          )
+        )
+    );
   } catch (error: any) {
     next(error);
   }
@@ -105,8 +113,8 @@ const generateAccessAndRefreshToken = async (userID: string) => {
     const refreshToken = user.generateRefreshToken();
 
     // Updating refresh token in database
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    // user.refreshToken = refreshToken;
+    // await user.save({ validateBeforeSave: false });
     return { accessToken, refreshToken };
   } catch (e: any) {
     throw new ApiError(
@@ -124,9 +132,19 @@ export const refreshToken = async (
   next: NextFunction
 ) => {
   try {
-    // Extracting refresh token from cookies
-    const token = req.cookies.refreshToken;
+    let token: string | undefined;
 
+    // Extracting access token from cookies
+    // token = req.cookies.accessToken || req.headers.authorization;
+    if (req.cookies && req.cookies.accessToken) {
+      token = req.cookies.accessToken;
+    } else if (req.headers.authorization) {
+      // Extract token from Authorization header if not found in cookies
+      const authHeader = req.headers.authorization;
+      if (authHeader.startsWith("Bearer ")) {
+        token = authHeader.slice(7).trim(); // Remove 'Bearer ' prefix
+      }
+    }
     // If token is not provided
     if (!token) {
       throw new ApiError(400, "Refresh token not provided ");
@@ -144,27 +162,27 @@ export const refreshToken = async (
     }
 
     // Finding user by ID
-    const user: User | null = await UserModel.findById(decodedToken.id);
+    // const user: User | null = await UserModel.findById(decodedToken.id);
 
-    if (!user) {
-      throw new ApiError(400, "Invalid token");
-    }
+    // if (!user) {
+    //   throw new ApiError(400, "Invalid token");
+    // }
 
     // Verifying refresh token from database
-    if (token !== user.refreshToken) {
-      throw new ApiError(400, "Refresh token is expired or invalid");
-    }
+    // if (token !== user.refreshToken) {
+    //   throw new ApiError(400, "Refresh token is expired or invalid");
+    // }
 
     // Generating new access and refresh tokens
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-      user._id
+      decodedToken.id
     );
 
     // Sending new tokens as cookies
     res
       .status(200)
-      .cookie("accessToken", accessToken, cookieOptions)
-      .cookie("refreshToken", refreshToken, cookieOptions)
+      // .cookie("accessToken", accessToken, cookieOptions)
+      // .cookie("refreshToken", refreshToken, cookieOptions)
       .json(
         new ApiResponse(
           200,
@@ -184,31 +202,31 @@ export const logout = async (
   next: NextFunction
 ) => {
   try {
-    // Extracting access token from cookies
-    const token = req.cookies.accessToken;
+    // // Extracting access token from cookies
+    // const token = req.cookies.accessToken;
 
-    if (!token) {
-      throw new ApiError(401, "Token is required");
-    }
+    // if (!token) {
+    //   throw new ApiError(401, "Token is required");
+    // }
 
-    // Decoding access token
-    const decodeToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET) as {
-      _id: string;
-    };
+    // // Decoding access token
+    // const decodeToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET) as {
+    //   _id: string;
+    // };
 
-    if (!decodeToken) {
-      throw new ApiError(401, "Token is invalid");
-    }
+    // if (!decodeToken) {
+    //   throw new ApiError(401, "Token is invalid");
+    // }
 
-    // Finding user by ID
-    const user = await UserModel.findById(decodeToken._id);
-    if (!user) {
-      throw new ApiError(401, "Token is invalid");
-    }
+    // // Finding user by ID
+    // const user = await UserModel.findById(decodeToken._id);
+    // if (!user) {
+    //   throw new ApiError(401, "Token is invalid");
+    // }
 
-    // Clearing refresh token from database
-    user.refreshToken = "";
-    user.save({ validateBeforeSave: false });
+    // // Clearing refresh token from database
+    // user.refreshToken = "";
+    // user.save({ validateBeforeSave: false });
 
     // Clearing cookies and sending response
     res

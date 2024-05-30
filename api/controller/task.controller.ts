@@ -10,8 +10,23 @@ import mongoose, { Model } from "mongoose";
 import { TaskHistoryAggregate } from "../aggregations/task_history_aggregate";
 
 // decoding token
-const decodeToken = (token: string): string | JwtPayload =>
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+const decodeToken = (req: Request): string | JwtPayload => {
+  let token: string | undefined;
+
+  // Extracting access token from cookies
+  // token = req.cookies.accessToken || req.headers.authorization;
+  if (req.cookies && req.cookies.accessToken) {
+    token = req.cookies.accessToken;
+  } else if (req.headers.authorization) {
+    // Extract token from Authorization header if not found in cookies
+    const authHeader = req.headers.authorization;
+    if (authHeader.startsWith("Bearer ")) {
+      token = authHeader.slice(7).trim(); // Remove 'Bearer ' prefix
+    }
+  }
+
+  return jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+};
 
 // Creating new task
 export const createTask = async (
@@ -27,8 +42,8 @@ export const createTask = async (
     }
 
     // Getting token and decoding it
-    const token = req.cookies.accessToken;
-    const decodeData = decodeToken(token) as User;
+
+    const decodeData = decodeToken(req) as User;
 
     // task obejct
     const taskData = {
@@ -57,8 +72,8 @@ export const getAllTask = async (
 ) => {
   try {
     // Getting token and decoding it
-    const token = req.cookies.accessToken;
-    const decodeData = decodeToken(token) as User;
+    // const token = req.cookies.accessToken;
+    const decodeData = decodeToken(req) as User;
 
     const statusString = req.query.status as string;
 
@@ -90,6 +105,19 @@ export const getAllTask = async (
     // Not found
     if (!tasks) {
       throw new ApiError(404, "Task not find");
+    }
+
+    // For formatting date
+    for (let i = 0; i < tasks.length; i++) {
+      const date = new Date(tasks[i].dueDate);
+      const options: Intl.DateTimeFormatOptions = {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      };
+      const formatter = new Intl.DateTimeFormat("en-US", options);
+      const formattedDate = formatter.format(date);
+      tasks[i].dueDate = formattedDate;
     }
 
     // success
@@ -166,9 +194,7 @@ export const getHistory = async (
   next: NextFunction
 ) => {
   try {
-    // Getting token and decoding it
-    const token = req.cookies.accessToken;
-    const decodeData = decodeToken(token) as User;
+    const decodeData = decodeToken(req) as User;
     const result = await TaskModel.aggregate(
       TaskHistoryAggregate(decodeData._id)
     );

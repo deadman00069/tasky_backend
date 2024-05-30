@@ -21,6 +21,6 @@ router.post("/signup", signupValidationRules, signup);
 router.post("/logout", logout);
 
 // Route to refresh access token
-router.post("/token/refresh", refreshToken);
+router.get("/token/refresh", refreshToken);
 
 export default router;
