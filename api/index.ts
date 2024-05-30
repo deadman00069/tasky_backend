@@ -7,7 +7,7 @@ import ErrorMiddleware from "./middleware/errorMiddleware.ts";
 import cors from "cors";
 
 const app = express();
-const port = 3004;
+const port = process.env.PORT || 4000;
 
 // Middleware
 app.use(cors({ credentials: true, origin: true }));
