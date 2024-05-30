@@ -10,7 +10,8 @@
     "outDir": "./build",
     "rootDir": "api",
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "moduleResolution": "node"
   },
   // "include": [
   //     "src/**/*.ts"
